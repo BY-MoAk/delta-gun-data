@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三角洲行动改枪码库</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        levelGod: '#ef4444',
+                        levelT0: '#22c55e',
+                        levelT1: '#eab308',
+                        levelT2: '#3b82f6',
+                        levelBad: '#78716c',
+                        sidebarBg: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width:6px;height:6px; }
+        ::-webkit-scrollbar-thumb { background:#94a3b8;border-radius:4px; }
+        [v-cloak]{ display:none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+<div id="app" v-cloak>
+    <header class="md:hidden fixed top-0 left-0 right-0 h-14 bg-sidebarBg text-white flex items-center px-4 z-30 shadow">
+        <button @click="mobileSideOpen = !mobileSideOpen" class="text-xl mr-3">
+            <i class="fa fa-bars"></i>
+        </button>
+        <h1 class="font-bold text-lg">改枪码库</h1>
+    </header>
+
+    <div v-if="mobileSideOpen" @click="mobileSideOpen=false" class="md:hidden fixed inset-0 bg-black/50 z-40"></div>
+
+    <div class="flex min-h-screen pt-14 md:pt-0">
+        <aside
+            :class="[
+                'fixed md:static top-0 left-0 h-full w-60 bg-sidebarBg text-gray-200 z-50 transition-transform duration-200 overflow-y-auto',
+                mobileSideOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            ]"
+        >
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-xl font-bold text-white">🔫改枪码分类</h2>
+            </div>
+            <nav class="py-2">
+                <div class="px-3 py-2 text-xs text-gray-400">武器类别</div>
+                <button
+                    v-for="cat in categoryList"
+                    @click="currentCat = cat; mobileSideOpen=false"
+                    :class="[
+                        'w-full text-left px-4 py-2.5 hover:bg-gray-700 transition',
+                        currentCat===cat ? 'bg-blue-600 text-white' : ''
+                    ]">
+                    {{cat}}
+                </button>
+
+                <div class="border-t border-gray-700 my-3"></div>
+                <div class="px-3 py-2 text-xs text-gray-400">操作</div>
+                <button @click="openAdminModal=true; mobileSideOpen=false" class="w-full text-left px-4 py-2.5 hover:bg-gray-700">
+                    <i class="fa fa-lock mr-2"></i>管理员入口
+                </button>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-4 md:p-6">
+            <div class="max-w-6xl mx-auto">
+                <h1 class="text-2xl font-bold mb-4 hidden md:block">三角洲行动改枪码库</h1>
+
+                <div class="mb-5">
+                    <input
+                        v-model="keyword"
+                        placeholder="🔍搜索枪械 / 配置 / 改枪码"
+                        class="w-full border rounded-lg px-4 py-2.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    >
+                </div>
+
+                <div class="flex flex-wrap gap-2 mb-4 text-sm">
+                    <span class="px-2 py-1 rounded text-white bg-levelGod">神</span>
+                    <span class="px-2 py-1 rounded text-white bg-levelT0">T0绿色</span>
+                    <span class="px-2 py-1 rounded text-white bg-levelT1">T1黄色</span>
+                    <span class="px-2 py-1 rounded text-white bg-levelT2">T2蓝色</span>
+                    <span class="px-2 py-1 rounded text-white bg-levelBad">屎</span>
+                </div>
+
+                <div v-if="loading" class="py-10 text-center text-gray-500">
+                    <i class="fa fa-spinner fa-spin text-2xl"></i>
+                    <div class="mt-2">正在加载云端改枪码数据...</div>
+                </div>
+
+                <div v-if="!loading" class="grid gap-3">
+                    <div
+                        v-for="item in showList"
+                        :key="item.code"
+                        :class="[
+                            'p-3 rounded-lg shadow bg-white border-l-4',
+                            item.level==='神' ? 'border-levelGod' : '',
+                            item.level==='T0枪械绿色' ? 'border-levelT0' : '',
+                            item.level==='T1枪械黄色' ? 'border-levelT1' : '',
+                            item.level==='T2枪械蓝色' ? 'border-levelT2' : '',
+                            item.level==='屎' ? 'border-levelBad' : '',
+                        ]"
+                    >
+                        <div class="flex flex-wrap justify-between items-start gap-2">
+                            <div>
+                                <div class="font-bold text-lg">{{item.gun_name}}</div>
+                                <div class="text-sm text-gray-600">{{item.config}}</div>
+                            </div>
+                            <span
+                                :class="[
+                                    'text-xs px-2 py-1 rounded text-white shrink-0',
+                                    item.level==='神' ? 'bg-levelGod' : '',
+                                    item.level==='T0枪械绿色' ? 'bg-levelT0' : '',
+                                    item.level==='T1枪械黄色' ? 'bg-levelT1' : '',
+                                    item.level==='T2枪械蓝色' ? 'bg-levelT2' : '',
+                                    item.level==='屎' ? 'bg-levelBad' : '',
+                                ]">
+                                {{item.level}}
+                            </span>
+                        </div>
+                        <div class="mt-2 flex items-center gap-2">
+                            <code class="bg-gray-100 px-2 py-1 rounded text-sm break-all flex-1">{{item.code}}</code>
+                            <button @click="copyCode(item.code)" class="bg-blue-500 text-white px-3 py-1 rounded shrink-0 text-sm">
+                                <i class="fa fa-copy"></i>复制
+                            </button>
+                        </div>
+                    </div>
+                    <div v-if="showList.length===0" class="py-10 text-center text-gray-400">暂无匹配改枪码</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div v-if="openAdminModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg w-full max-w-md p-5">
+            <h3 class="font-bold text-lg mb-3">管理员验证</h3>
+            <input v-model="adminPwd" type="password" placeholder="输入管理员密码" class="w-full border px-3 py-2 rounded mb-4">
+            <div class="flex gap-2 justify-end">
+                <button @click="openAdminModal=false;adminPwd=''" class="px-4 py-2 border rounded">取消</button>
+                <button @click="checkAdminPwd" class="px-4 py-2 bg-blue-600 text-white rounded">确认登录</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="adminPanelOpen" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg w-full max-w-xl max-h-[90vh] overflow-y-auto p-5">
+            <h3 class="font-bold text-lg mb-3">🔧管理员编辑改枪码</h3>
+
+            <div class="space-y-3 border-b pb-4 mb-4">
+                <div>
+                    <label class="text-sm">武器分类</label>
+                    <select v-model="editForm.category" class="w-full border rounded px-3 py-2 mt-1">
+                        <option v-for="c in categoryList" :value="c">{{c}}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm">等级标签</label>
+                    <select v-model="editForm.level" class="w-full border rounded px-3 py-2 mt-1">
+                        <option>神</option>
+                        <option>T0枪械绿色</option>
+                        <option>T1枪械黄色</option>
+                        <option>T2枪械蓝色</option>
+                        <option>屎</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm">枪械名称</label>
+                    <input v-model="editForm.gun_name" class="w-full border rounded px-3 py-2 mt-1">
+                </div>
+                <div>
+                    <label class="text-sm">配置描述（价格/方案）</label>
+                    <input v-model="editForm.config" class="w-full border rounded px-3 py-2 mt-1">
+                </div>
+                <div>
+                    <label class="text-sm">改枪码</label>
+                    <input v-model="editForm.code" class="w-full border rounded px-3 py-2 mt-1">
+                </div>
+                <div class="flex gap-2">
+                    <button @click="saveEditItem" class="bg-green-600 text-white px-4 py-2 rounded">保存条目</button>
+                    <button @click="resetEditForm" class="border px-4 py-2 rounded">清空表单</button>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <div class="font-semibold">全部数据(共{{gunData.length}}条)</div>
+                    <button @click="exportJson" class="bg-amber-500 text-white px-3 py-1 rounded text-sm">
+                        导出JSON(复制到剪贴板)
+                    </button>
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto border rounded p-2">
+                    <div v-for="(it,idx) in gunData" :key="idx" class="flex items-center gap-2 border-b pb-1 text-sm">
+                        <span class="shrink-0 w-20 truncate">{{it.gun_name}}</span>
+                        <span class="text-gray-500 truncate flex-1">{{it.config}}</span>
+                        <button @click="fillEditForm(it)" class="text-blue-600">编辑</button>
+                        <button @click="delItem(idx)" class="text-red-500">删除</button>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-gray-500 bg-yellow-50 p-2 rounded">
+                    ⚠️操作说明：编辑新增完成后，点【导出JSON】复制全部数据，到GitHub替换gun_data.json文件，访客刷新网页即可同步更新。
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+                <button @click="adminPanelOpen=false" class="px-4 py-2 bg-gray-600 text-white rounded">关闭管理面板</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="toast.show" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded z-[100]">
+        {{toast.msg}}
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+createApp({
+    data(){
+        return {
+            // =========【你必须修改这里！！】============
+            ADMIN_PASSWORD: "123456",
+            CLOUD_JSON_URL: "https://mirror.ghproxy.com/https://raw.githubusercontent.com/你的github用户名/delta‑gun‑data/main/gun_data.json",
+            // ====================================
+            categoryList: ["步枪","冲锋枪","射手步枪以及狙击步枪","机枪","霰弹枪以及其它","金枪客合集"],
+            currentCat:"步枪",
+            keyword:"",
+            loading:true,
+            gunData:[],
+
+            mobileSideOpen:false,
+
+            openAdminModal:false,
+            adminPwd:"",
+            adminPanelOpen:false,
+
+            editForm:{
+                category:"步枪",
+                level:"T0枪械绿色",
+                gun_name:"",
+                config:"",
+                code:""
+            },
+            editIndex:null,
+
+            toast:{show:false,msg:""}
+        }
+    },
+    computed:{
+        showList(){
+            let arr = this.gunData.filter(x=>x.category === this.currentCat);
+            if(this.keyword.trim()){
+                const kw = this.keyword.toLowerCase();
+                arr = arr.filter(d=>{
+                    const s = `${d.gun_name}${d.config}${d.code}${d.level}`.toLowerCase();
+                    return s.includes(kw);
+                })
+            }
+            return arr;
+        }
+    },
+    mounted(){
+        this.fetchCloudData();
+    },
+    methods:{
+        async fetchCloudData(){
+            this.loading = true;
+            try{
+                const res = await fetch(this.CLOUD_JSON_URL);
+                if(!res.ok) throw new Error("网络错误");
+                this.gunData = await res.json();
+            }catch(e){
+                console.error(e);
+                this.showToast("拉取云端数据失败，请检查网络或链接地址");
+            }finally{
+                this.loading = false;
+            }
+        },
+        showToast(msg){
+            this.toast.msg = msg;
+            this.toast.show = true;
+            setTimeout(()=>this.toast.show=false,2200);
+        },
+        copyCode(text){
+            navigator.clipboard.writeText(text).then(()=>{
+                this.showToast("✅改枪码已复制");
+            })
+        },
+        checkAdminPwd(){
+            if(this.adminPwd === this.ADMIN_PASSWORD){
+                this.openAdminModal = false;
+                this.adminPwd = "";
+                this.adminPanelOpen = true;
+                this.showToast("管理员登录成功");
+            }else{
+                this.showToast("❌密码错误");
+            }
+        },
+        resetEditForm(){
+            this.editIndex = null;
+            this.editForm = {category:"步枪",level:"T0枪械绿色",gun_name:"",config:"",code:""}
+        },
+        fillEditForm(item){
+            this.editForm = {...item};
+            this.editIndex = this.gunData.indexOf(item);
+        },
+        saveEditItem(){
+            if(!this.editForm.gun_name || !this.editForm.code){
+                this.showToast("枪械名称和改枪码不能为空");
+                return;
+            }
+            if(this.editIndex!==null){
+                this.gunData[this.editIndex] = {...this.editForm};
+            }else{
+                this.gunData.push({...this.editForm});
+            }
+            this.resetEditForm();
+            this.showToast("✅条目已保存到本地内存，请导出JSON上传仓库");
+        },
+        delItem(idx){
+            this.gunData.splice(idx,1);
+            this.showToast("已删除");
+        },
+        exportJson(){
+            const str = JSON.stringify(this.gunData,null,2);
+            navigator.clipboard.writeText(str).then(()=>{
+                this.showToast("✅全部JSON已复制剪贴板！去GitHub替换gun_data.json");
+            })
+        }
+    }
+}).mount("#app")
+</script>
+</body>
+</html>
